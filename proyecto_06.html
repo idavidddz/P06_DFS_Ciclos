@@ -4,368 +4,401 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>P06 — SinceRoute DFS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;800&display=swap" rel="stylesheet"/>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
-
   :root {
-    --bg: #0a0e1a;
-    --panel: #0f1628;
-    --border: #1e2d50;
-    --accent: #00d4ff;
-    --accent2: #ff6b35;
-    --green: #00ff88;
-    --gray: #3a4a6b;
-    --white: #e8eef8;
-    --dim: #6b7a99;
-    --node-default: #1e2d50;
-    --node-white: #2a3a5e;
-    --node-gray: #e8a020;
-    --node-black: #1a7a4a;
-    --edge: #1e3a5f;
-    --edge-active: #00d4ff;
-    --cycle-edge: #ff4444;
+    --black: #0a0a0a;
+    --cream: #f0e8d5;
+    --red: #e63329;
+    --red2: #ff1a1a;
+    --white: #ffffff;
+    --gray: #888888;
+    --panel: #111111;
+    --border: #2a2a2a;
+    --accent: #e63329;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
 
   body {
-    background: var(--bg);
-    color: var(--white);
-    font-family: 'Syne', sans-serif;
+    background: var(--black);
+    color: var(--cream);
+    font-family: 'Space Mono', monospace;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
+  /* ── GRAIN OVERLAY ── */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none;
+    z-index:999;
+    opacity:0.5;
+  }
+
+  /* ── HEADER ── */
   header {
-    padding: 18px 32px;
-    border-bottom: 1px solid var(--border);
+    background: var(--black);
+    border-bottom: 3px solid var(--red);
+    padding: 0 28px;
+    height: 58px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--panel);
+    position: relative;
+    z-index: 10;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
   }
 
   header h1 {
-    font-size: 1.1rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: var(--accent);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: .12em;
+    color: var(--white);
+    line-height: 1;
   }
 
-  header span {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--dim);
+  header h1 span { color: var(--red); }
+
+  .header-tag {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--gray);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
   }
 
+  .header-right {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: .8rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--gray);
+  }
+
+  /* ── LAYOUT ── */
   .layout {
     display: flex;
     flex: 1;
+    height: calc(100vh - 58px);
     overflow: hidden;
   }
 
-  /* ── SIDE PANEL ── */
+  /* ── SIDEBAR ── */
   .sidebar {
-    width: 300px;
-    min-width: 300px;
+    width: 280px;
+    min-width: 280px;
     background: var(--panel);
-    border-right: 1px solid var(--border);
+    border-right: 2px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
-  .controls {
-    padding: 20px 16px;
+  .section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: .18em;
+    color: var(--red);
+    padding: 14px 16px 8px;
     border-bottom: 1px solid var(--border);
   }
 
-  .controls h2 {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--dim);
-    margin-bottom: 14px;
-    text-transform: uppercase;
-  }
-
+  /* ── BUTTONS ── */
   .btn-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-  }
-
-  button {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--white);
-    cursor: pointer;
-    border-radius: 6px;
-    text-align: left;
-    transition: all 0.15s;
-    letter-spacing: 0.03em;
-  }
-
-  button:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.05); }
-  button.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
-  button.danger:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(255,107,53,0.05); }
-  button.reset-btn { border-color: var(--gray); color: var(--dim); }
-  button.reset-btn:hover { border-color: var(--white); color: var(--white); background: transparent; }
-
-  .speed-control {
-    margin-top: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .speed-control label {
-    font-size: 0.65rem;
-    color: var(--dim);
-    white-space: nowrap;
-  }
-
-  input[type=range] {
-    flex: 1;
-    accent-color: var(--accent);
-    height: 3px;
-  }
-
-  .legend {
-    padding: 16px;
+    padding: 10px 12px;
+    gap: 6px;
     border-bottom: 1px solid var(--border);
   }
 
-  .legend h2 {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--dim);
-    margin-bottom: 12px;
+  button {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: .85rem;
+    font-weight: 600;
+    letter-spacing: .1em;
     text-transform: uppercase;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--dim);
-  }
-
-  .legend-dot {
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    border: 2px solid transparent;
-  }
-
-  .legend-line {
-    width: 24px; height: 3px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-
-  .log-panel {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-  }
-
-  .log-panel h2 {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--dim);
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    padding: 4px 0;
-    position: sticky;
-    top: 0;
-    background: var(--panel);
-  }
-
-  .log-entry {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem;
-    padding: 5px 8px;
-    border-radius: 4px;
-    margin-bottom: 4px;
-    border-left: 2px solid transparent;
-    animation: fadeIn 0.2s ease;
-    line-height: 1.5;
-  }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; } }
-
-  .log-visit  { border-color: var(--node-gray); color: #e8a020; background: rgba(232,160,32,0.05); }
-  .log-done   { border-color: var(--green);     color: var(--green); background: rgba(0,255,136,0.04); }
-  .log-cycle  { border-color: #ff4444;          color: #ff4444; background: rgba(255,68,68,0.06); }
-  .log-info   { border-color: var(--accent);    color: var(--accent); background: rgba(0,212,255,0.04); }
-  .log-result { border-color: var(--accent2);   color: var(--accent2); background: rgba(255,107,53,0.06); font-weight: 700; }
-  .log-section { border-color: var(--gray); color: var(--white); background: rgba(255,255,255,0.03); font-weight: 700; letter-spacing: 0.05em; }
-
-  /* ── CANVAS AREA ── */
-  .canvas-area {
-    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    background: transparent;
+    color: var(--cream);
+    cursor: pointer;
+    text-align: left;
+    transition: all .12s;
     position: relative;
     overflow: hidden;
   }
 
-  svg#graph {
-    width: 100%;
-    height: 100%;
-  }
-
-  .edge-line {
-    stroke: var(--edge);
-    stroke-width: 2;
-    transition: stroke 0.3s, stroke-width 0.3s;
-    cursor: pointer;
-  }
-
-  .edge-label {
-    fill: var(--dim);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    pointer-events: none;
-    transition: fill 0.3s;
-  }
-
-  .node-circle {
-    transition: fill 0.4s, stroke 0.4s, r 0.2s;
-    cursor: pointer;
-    stroke-width: 2.5;
-  }
-
-  .node-label-id {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    font-weight: 700;
-    fill: #fff;
-    pointer-events: none;
-    text-anchor: middle;
-    dominant-baseline: middle;
-  }
-
-  .node-label-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    fill: var(--white);
-    pointer-events: none;
-    text-anchor: middle;
-    transition: opacity 0.3s;
-  }
-
-  .status-bar {
+  button::before {
+    content: '';
     position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 30px;
-    padding: 8px 20px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--accent);
-    white-space: nowrap;
-    pointer-events: none;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--red);
+    transform: scaleY(0);
+    transition: transform .12s;
   }
 
-  .tooltip {
-    position: absolute;
-    background: var(--panel);
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
+  button:hover {
+    border-color: var(--red);
     color: var(--white);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 10;
-    max-width: 220px;
-    line-height: 1.6;
+    background: rgba(230,51,41,.08);
+  }
+  button:hover::before { transform: scaleY(1); }
+  button.active {
+    border-color: var(--red);
+    color: var(--white);
+    background: rgba(230,51,41,.12);
+  }
+  button.active::before { transform: scaleY(1); }
+
+  .reset-btn {
+    border-color: #1a1a1a !important;
+    color: var(--gray) !important;
+    font-size: .75rem !important;
+  }
+  .reset-btn:hover { border-color: var(--border) !important; color: var(--cream) !important; background: transparent !important; }
+  .reset-btn::before { display:none; }
+
+  /* ── SPEED ── */
+  .speed-wrap {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .speed-wrap label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--gray);
+    white-space: nowrap;
+  }
+  input[type=range] { flex:1; accent-color: var(--red); height:3px; }
+
+  /* ── LEGEND ── */
+  .legend-wrap {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: .58rem;
+    color: var(--gray);
+  }
+  .ldot { width:14px; height:14px; border-radius:50%; flex-shrink:0; border:2px solid transparent; }
+  .lline { width:22px; height:3px; border-radius:2px; flex-shrink:0; }
+
+  /* ── LOG ── */
+  .log-wrap {
+    flex:1;
+    overflow-y: auto;
+    padding: 8px 12px;
+  }
+  .log-wrap::-webkit-scrollbar { width:3px; }
+  .log-wrap::-webkit-scrollbar-track { background:transparent; }
+  .log-wrap::-webkit-scrollbar-thumb { background:var(--border); }
+
+  .log-entry {
+    font-family: 'Space Mono', monospace;
+    font-size: .56rem;
+    padding: 4px 8px;
+    margin-bottom: 3px;
+    border-left: 2px solid transparent;
+    animation: fadeIn .15s ease;
+    line-height: 1.5;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateX(-3px)} to{opacity:1} }
+  .lv { border-color:#888; color:#aaa; background:rgba(136,136,136,.04); }
+  .ld { border-color:#333; color:#555; }
+  .lc { border-color:var(--red); color:var(--red); background:rgba(230,51,41,.05); }
+  .li { border-color:#333; color:#777; }
+  .lr { border-color:var(--red); color:var(--cream); font-weight:700; background:rgba(230,51,41,.08); }
+  .ls { border-color:var(--border); color:var(--white); font-weight:700; margin-top:6px; letter-spacing:.06em; }
+
+  /* ── CANVAS ── */
+  .canvas-area {
+    flex:1;
+    position:relative;
+    overflow:hidden;
+    background: var(--black);
   }
 
-  .tooltip.visible { opacity: 1; }
-  .tooltip strong { color: var(--accent); display: block; margin-bottom: 4px; }
+  /* diagonal stripe bg */
+  .canvas-area::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 40px,
+      rgba(255,255,255,.012) 40px,
+      rgba(255,255,255,.012) 41px
+    );
+    pointer-events:none;
+  }
+
+  svg#graph { width:100%; height:100%; }
+
+  .edge-line { stroke:#222; stroke-width:1.5; transition:stroke .3s, stroke-width .3s; }
+  .edge-label { fill:#333; font-family:'Space Mono',monospace; font-size:9px; pointer-events:none; }
+  .node-circle { cursor:pointer; transition:r .2s; }
+  .node-id { font-family:'Bebas Neue',sans-serif; font-size:10px; letter-spacing:.05em; pointer-events:none; text-anchor:middle; dominant-baseline:middle; }
+  .node-name { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:.04em; fill:var(--cream); pointer-events:none; text-anchor:middle; }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    position:absolute;
+    bottom:16px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--black);
+    border:2px solid var(--red);
+    padding:6px 20px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:.8rem;
+    font-weight:600;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    color:var(--cream);
+    white-space:nowrap;
+    pointer-events:none;
+  }
+
+  /* corner decorations */
+  .status-bar::before, .status-bar::after {
+    content:'';
+    position:absolute;
+    top:-4px;
+    width:6px; height:6px;
+    background:var(--red);
+  }
+  .status-bar::before { left:-4px; }
+  .status-bar::after  { right:-4px; }
+
+  /* ── TOOLTIP ── */
+  .tooltip {
+    position:absolute;
+    background:var(--black);
+    border:2px solid var(--red);
+    padding:10px 14px;
+    font-family:'Space Mono',monospace;
+    font-size:.58rem;
+    color:var(--cream);
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .15s;
+    z-index:10;
+    max-width:200px;
+    line-height:1.7;
+  }
+  .tooltip.show { opacity:1; }
+  .tooltip strong { font-family:'Bebas Neue',sans-serif; font-size:.9rem; color:var(--red); display:block; letter-spacing:.08em; margin-bottom:3px; }
+
+  /* ── BIG LABEL ── */
+  .big-label {
+    position:absolute;
+    top:16px;
+    right:20px;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:5rem;
+    line-height:1;
+    letter-spacing:.06em;
+    color:rgba(255,255,255,.04);
+    pointer-events:none;
+    user-select:none;
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>P06 · SINCELEJO — DFS + DETECCIÓN DE CICLOS</h1>
-  <span>Isaias Ruiz &amp; Jhoher Herazo · Semana S3</span>
+  <div class="header-left">
+    <h1>SINCE<span>ROUTE</span></h1>
+    <div class="header-tag">P06 · DFS · S3</div>
+  </div>
+  <div class="header-right">Ruiz &amp; Herazo · UAJS</div>
 </header>
 
 <div class="layout">
-
-  <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="controls">
-      <h2>Algoritmos</h2>
-      <div class="btn-group">
-        <button id="btn-adj" onclick="showAdjacency()">① Lista de Adyacencia</button>
-        <button id="btn-dfs" onclick="runDFS()">② Ejecutar DFS</button>
-        <button id="btn-cycle" onclick="runCycle()" class="danger">③ Detectar Ciclos</button>
-        <button id="btn-comp" onclick="runComponents()">④ Componentes Conexas</button>
-        <button id="btn-walk" onclick="runWalk()">⑤ Recorrer el grafo</button>
-        <button class="reset-btn" onclick="resetAll()">↺ Reiniciar</button>
-      </div>
-      <div class="speed-control">
-        <label>Velocidad:</label>
-        <input type="range" id="speed" min="300" max="3000" value="1200" step="100"/>
-      </div>
+    <div class="section-label">Algoritmos</div>
+    <div class="btn-group">
+      <button id="b1" onclick="showAdj()">① Lista de Adyacencia</button>
+      <button id="b2" onclick="runDFS()">② Ejecutar DFS</button>
+      <button id="b3" onclick="runCycle()">③ Detectar Ciclos</button>
+      <button id="b4" onclick="runComp()">④ Componentes Conexas</button>
+      <button id="b5" onclick="runWalk()">⑤ Recorrer el grafo</button>
+      <button class="reset-btn" onclick="doReset()">↺ Reiniciar</button>
     </div>
 
-    <div class="legend">
-      <h2>Leyenda</h2>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffffff;border-color:#aaaaaa"></div>BLANCO — no visitado</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#888888;border-color:#cccccc"></div>GRIS — en proceso</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#111111;border-color:#555555"></div>NEGRO — completado</div>
-      <div class="legend-item"><div class="legend-line" style="background:#00d4ff"></div>Arista recorrida</div>
-      <div class="legend-item"><div class="legend-line" style="background:#ff4444"></div>Back edge (ciclo)</div>
+    <div class="speed-wrap">
+      <label>Velocidad</label>
+      <input type="range" id="spd" min="300" max="3000" value="1200" step="100"/>
     </div>
 
-    <div class="log-panel">
-      <h2>Log de ejecución</h2>
+    <div class="legend-wrap">
+      <div class="section-label" style="padding:0 0 8px;border:none;font-size:.8rem;">Leyenda DFS</div>
+      <div class="legend-item"><div class="ldot" style="background:#ffffff;border-color:#aaaaaa"></div>BLANCO — no visitado</div>
+      <div class="legend-item"><div class="ldot" style="background:#888888;border-color:#cccccc"></div>GRIS — en proceso</div>
+      <div class="legend-item"><div class="ldot" style="background:#111111;border-color:#555555"></div>NEGRO — completado</div>
+      <div class="legend-item"><div class="lline" style="background:#00eeff"></div>Arista recorrida</div>
+      <div class="legend-item"><div class="lline" style="background:#ff0055"></div>Back edge (ciclo)</div>
+    </div>
+
+    <div class="log-wrap">
+      <div class="section-label" style="padding:0 0 8px;border:none;font-size:.8rem;">Log</div>
       <div id="log"></div>
     </div>
   </div>
 
-  <!-- GRAPH -->
   <div class="canvas-area">
+    <div class="big-label">DFS</div>
     <svg id="graph"></svg>
-    <div class="status-bar" id="status">Selecciona un algoritmo para comenzar</div>
-    <div class="tooltip" id="tooltip"></div>
+    <div class="status-bar" id="status">Selecciona un algoritmo</div>
+    <div class="tooltip" id="tip"></div>
   </div>
 </div>
 
 <script>
-// ─── DATOS DEL GRAFO (coordenadas reales del KML) ───
-const NODES = [
-  { id:'N00', name:'UAJS Sede E',          type:'Universidad', lng:-75.3978, lat:9.3047 },
-  { id:'N01', name:'UAJS Sede C',          type:'Universidad', lng:-75.3889, lat:9.3021 },
-  { id:'N02', name:'UNISUCRE',             type:'Universidad', lng:-75.4012, lat:9.2967 },
-  { id:'N03', name:'CECAR',                type:'Universidad', lng:-75.4120, lat:9.3180 },
-  { id:'N04', name:'IPS SEYSA',            type:'Salud',       lng:-75.3942, lat:9.3058 },
-  { id:'N05', name:'Clínica Las Américas', type:'Salud',       lng:-75.3960, lat:9.3040 },
-  { id:'N06', name:'Terminal Transporte',  type:'Movilidad',   lng:-75.3850, lat:9.2880 },
-  { id:'N07', name:'Mercado Sincelejo',    type:'Comercio',    lng:-75.3921, lat:9.3012 },
-  { id:'N08', name:'Av. Alfonso López',    type:'Movilidad',   lng:-75.3898, lat:9.3025 },
-  { id:'N09', name:'Parque Santander',     type:'Referencia',  lng:-75.3930, lat:9.3001 },
-  { id:'N10', name:'Calle 30 / Troncal',  type:'Movilidad',   lng:-75.4050, lat:9.3080 },
-  { id:'N11', name:'Barrio Puerta Roja',   type:'Referencia',  lng:-75.4015, lat:9.2970 },
-];
 
-const EDGES = [
+const NODES = [
+  {id:'N00',name:'UAJS Sede E',     lng:-75.3978,lat:9.3047},
+  {id:'N01',name:'UAJS Sede C',     lng:-75.3889,lat:9.3021},
+  {id:'N02',name:'UNISUCRE',        lng:-75.4012,lat:9.2967},
+  {id:'N03',name:'CECAR',           lng:-75.4120,lat:9.3180},
+  {id:'N04',name:'IPS SEYSA',       lng:-75.3942,lat:9.3058},
+  {id:'N05',name:'Clinica Americas',lng:-75.3960,lat:9.3040},
+  {id:'N06',name:'Terminal Trans.', lng:-75.3850,lat:9.2880},
+  {id:'N07',name:'Mercado Sincelejo',lng:-75.3921,lat:9.3012},
+  {id:'N08',name:'Av. Alfonso Lopez',lng:-75.3898,lat:9.3025},
+  {id:'N09',name:'Parque Santander',lng:-75.3930,lat:9.3001},
+  {id:'N10',name:'Calle 30/Troncal',lng:-75.4050,lat:9.3080},
+  {id:'N11',name:'B. Puerta Roja',  lng:-75.4015,lat:9.2970},
+];
+const EDGES=[
   ['N00','N01',8],['N00','N05',12],['N00','N08',6],
   ['N01','N04',5],['N01','N08',4],['N01','N10',10],
   ['N02','N05',9],['N02','N09',7],['N02','N11',4],
@@ -378,520 +411,280 @@ const EDGES = [
   ['N10','N06',14],
 ];
 
-// ─── ESTADO ───
-let color = {};
-let running = false;
-let svgW, svgH;
-let nodePos = {};
+// Mapa de adyacencia
+const ADJ={};
+NODES.forEach(n=>ADJ[n.id]=[]);
+EDGES.forEach(([a,b,w])=>{ADJ[a].push({to:b,w});ADJ[b].push({to:a,w});});
 
-// ─── COORDENADAS → PANTALLA ───
-function project() {
-  const svg = document.getElementById('graph');
-  svgW = svg.clientWidth || 900;
-  svgH = svg.clientHeight || 650;
-  // Solo calcular posiciones una vez
-  if (Object.keys(nodePos).length > 0) return;
+let nodePos={}, colState={}, busy=false;
 
-  const lngs = NODES.map(n => n.lng);
-  const lats = NODES.map(n => n.lat);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-
-  const pad = 60;
-  const scaleX = 1.35, scaleY = 1.45;
-  const cx = svgW / 2, cy = svgH / 2;
-
-  const base = {};
-  NODES.forEach(n => {
-    base[n.id] = {
-      x: pad + ((n.lng - minLng) / (maxLng - minLng)) * (svgW - pad*2),
-      y: (svgH - pad) - ((n.lat - minLat) / (maxLat - minLat)) * (svgH - pad*2)
-    };
-  });
-
-  NODES.forEach(n => {
-    const bx = base[n.id].x, by = base[n.id].y;
-    nodePos[n.id] = {
-      x: Math.max(60, Math.min(svgW-60, cx + (bx - cx) * scaleX)),
-      y: Math.max(60, Math.min(svgH-60, cy + (by - cy) * scaleY))
+// ── Proyección (solo una vez) ──
+function project(){
+  if(Object.keys(nodePos).length) return;
+  const svg=document.getElementById('graph');
+  const W=svg.clientWidth||900, H=svg.clientHeight||650;
+  const lngs=NODES.map(n=>n.lng), lats=NODES.map(n=>n.lat);
+  const mnLng=Math.min(...lngs),mxLng=Math.max(...lngs);
+  const mnLat=Math.min(...lats),mxLat=Math.max(...lats);
+  const pad=60, cx=W/2, cy=H/2, sx=1.35, sy=1.45;
+  NODES.forEach(n=>{
+    const bx=pad+((n.lng-mnLng)/(mxLng-mnLng))*(W-pad*2);
+    const by=(H-pad)-((n.lat-mnLat)/(mxLat-mnLat))*(H-pad*2);
+    nodePos[n.id]={
+      x:Math.max(65,Math.min(W-65, cx+(bx-cx)*sx)),
+      y:Math.max(65,Math.min(H-65, cy+(by-cy)*sy))
     };
   });
 }
 
-// ─── RENDER ───
-function buildGraph() {
+// ── Construir SVG (solo una vez) ──
+function buildGraph(){
   project();
-  const svg = document.getElementById('graph');
-  svg.innerHTML = '';
-
-  // Definir marcador de flecha
-  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
-  defs.innerHTML = `
-    <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#1e3a5f"/>
-    </marker>
-  `;
-  svg.appendChild(defs);
-
+  const svg=document.getElementById('graph');
+  svg.innerHTML='';
   // Aristas
-  EDGES.forEach(([a,b,w]) => {
-    const pa = nodePos[a], pb = nodePos[b];
-    const mx = (pa.x+pb.x)/2, my = (pa.y+pb.y)/2;
-
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', pa.x); line.setAttribute('y1', pa.y);
-    line.setAttribute('x2', pb.x); line.setAttribute('y2', pb.y);
-    line.setAttribute('class','edge-line');
-    line.setAttribute('id', `edge-${a}-${b}`);
-    svg.appendChild(line);
-
-    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
-    txt.setAttribute('x', mx); txt.setAttribute('y', my-5);
-    txt.setAttribute('class','edge-label');
-    txt.setAttribute('id', `elabel-${a}-${b}`);
-    txt.textContent = w+'m';
-    svg.appendChild(txt);
+  EDGES.forEach(([a,b,w])=>{
+    const pa=nodePos[a],pb=nodePos[b];
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',pa.x);ln.setAttribute('y1',pa.y);
+    ln.setAttribute('x2',pb.x);ln.setAttribute('y2',pb.y);
+    ln.setAttribute('class','edge-line');
+    ln.setAttribute('id',`e-${a}-${b}`);
+    svg.appendChild(ln);
+    const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',mx);tx.setAttribute('y',my-5);
+    tx.setAttribute('class','edge-label');tx.setAttribute('id',`el-${a}-${b}`);
+    tx.textContent=w+'m'; svg.appendChild(tx);
   });
-
   // Nodos
-  const typeColors = {
-    Universidad:'#1565C0', Salud:'#2E7D32',
-    Movilidad:'#6A1B9A', Comercio:'#E65100', Referencia:'#37474F'
-  };
-
-  NODES.forEach(n => {
-    const p = nodePos[n.id];
-    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-    g.setAttribute('id', `node-g-${n.id}`);
-    g.setAttribute('transform', `translate(${p.x},${p.y})`);
-    g.style.cursor = 'pointer';
-
-    // Sombra
-    const shadow = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    shadow.setAttribute('r','20');
-    shadow.setAttribute('fill','rgba(0,0,0,0.3)');
-    shadow.setAttribute('transform','translate(2,3)');
-    g.appendChild(shadow);
-
-    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    circle.setAttribute('r','18');
-    circle.setAttribute('class','node-circle');
-    circle.setAttribute('id', `node-${n.id}`);
-    circle.setAttribute('fill', '#ffffff');
-    circle.setAttribute('stroke', '#aaaaaa');
-    g.appendChild(circle);
-
-    const lid = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lid.setAttribute('class','node-label-id');
-    lid.setAttribute('fill','#000000');
-    lid.textContent = n.id;
-    g.appendChild(lid);
-
-    const lname = document.createElementNS('http://www.w3.org/2000/svg','text');
-    lname.setAttribute('class','node-label-name');
-    lname.setAttribute('y','32');
-    lname.textContent = n.name.length > 14 ? n.name.slice(0,13)+'…' : n.name;
-    g.appendChild(lname);
-
-    g.addEventListener('mouseenter', e => showTooltip(n, e));
-    g.addEventListener('mouseleave', () => hideTooltip());
-
+  NODES.forEach(n=>{
+    const p=nodePos[n.id];
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('id',`ng-${n.id}`);
+    g.setAttribute('transform',`translate(${p.x},${p.y})`);
+    g.style.cursor='pointer';
+    const sh=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    sh.setAttribute('r','20');sh.setAttribute('fill','rgba(0,0,0,0.3)');
+    sh.setAttribute('transform','translate(2,3)'); g.appendChild(sh);
+    const ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ci.setAttribute('r','18');ci.setAttribute('class','node-circle');
+    ci.setAttribute('id',`nc-${n.id}`);
+    // BLANCO inicial
+    ci.setAttribute('fill','#ffffff');ci.setAttribute('stroke','#aaaaaa');
+    g.appendChild(ci);
+    const lid=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lid.setAttribute('class','node-id');lid.setAttribute('id',`nid-${n.id}`);
+    lid.setAttribute('fill','#000000');lid.textContent=n.id; g.appendChild(lid);
+    const lnm=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lnm.setAttribute('class','node-name');lnm.setAttribute('y','32');
+    lnm.textContent=n.name.length>15?n.name.slice(0,14)+'…':n.name; g.appendChild(lnm);
+    g.addEventListener('mouseenter',e=>showTip(n,e));
+    g.addEventListener('mouseleave',hideTip);
     svg.appendChild(g);
-    color[n.id] = 'BLANCO';
+    colState[n.id]='BLANCO';
   });
 }
 
-// ─── TOOLTIP ───
-function showTooltip(n, e) {
-  const t = document.getElementById('tooltip');
-  const adj = EDGES.filter(([a,b]) => a===n.id||b===n.id)
-    .map(([a,b,w]) => `${a===n.id?b:a} (${w}min)`).join(', ');
-  t.innerHTML = `<strong>${n.id} — ${n.name}</strong>Tipo: ${n.type}<br>Conexiones: ${adj}<br>Color: ${color[n.id]||'BLANCO'}`;
-  t.style.left = (e.offsetX+16)+'px';
-  t.style.top  = (e.offsetY+16)+'px';
-  t.classList.add('visible');
-}
-function hideTooltip() {
-  document.getElementById('tooltip').classList.remove('visible');
-}
-
-// ─── COLOR NODO ───
-function setNodeColor(id, state) {
-  color[id] = state;
-  const c = document.getElementById(`node-${id}`);
-  if (!c) return;
-  if (state === 'BLANCO') { c.setAttribute('fill','#ffffff'); c.setAttribute('stroke','#aaaaaa'); c.setAttribute('r','18'); c.style.filter=''; }
-  if (state === 'GRIS')   { c.setAttribute('fill','#888888'); c.setAttribute('stroke','#ffffff'); c.setAttribute('r','22'); c.style.filter='drop-shadow(0 0 8px #ffffff)'; }
-  if (state === 'NEGRO')  { c.setAttribute('fill','#111111'); c.setAttribute('stroke','#555555'); c.setAttribute('r','18'); c.style.filter=''; }
-  const lid = document.querySelector(`#node-g-${id} .node-label-id`);
-  if (lid) lid.setAttribute('fill', state === 'BLANCO' ? '#000000' : '#ffffff');
-}
-
-function highlightEdge(a, b, type, compId) {
-  const el = document.getElementById(`edge-${a}-${b}`) || document.getElementById(`edge-${b}-${a}`);
-  const tl = document.getElementById(`elabel-${a}-${b}`) || document.getElementById(`elabel-${b}-${a}`);
-  if (!el) return;
-  if (type === 'active') { el.style.stroke='#00eeff'; el.style.strokeWidth='5'; el.style.filter='drop-shadow(0 0 6px #00eeff)'; if(tl) tl.style.fill='#00eeff'; }
-  if (type === 'cycle')  { el.style.stroke='#ff0055'; el.style.strokeWidth='6'; el.style.filter='drop-shadow(0 0 8px #ff0055)'; if(tl) tl.style.fill='#ff0055'; }
-  if (type === 'comp')   {
-    const compColors = ['#ff00cc','#ffdd00','#00ffaa','#ff6600'];
-    const col = compColors[(compId||0) % compColors.length];
-    el.style.stroke=col; el.style.strokeWidth='4'; el.style.filter=`drop-shadow(0 0 5px ${col})`;
-    if(tl) tl.style.fill=col;
+// ── Color de nodo ──
+function setColor(id, state){
+  colState[id]=state;
+  const ci=document.getElementById(`nc-${id}`);
+  const lid=document.getElementById(`nid-${id}`);
+  if(!ci) return;
+  if(state==='BLANCO'){
+    ci.setAttribute('fill','#ffffff'); ci.setAttribute('stroke','#aaaaaa');
+    ci.setAttribute('r','18'); ci.style.filter='';
+    if(lid) lid.setAttribute('fill','#000000');
+  } else if(state==='GRIS'){
+    ci.setAttribute('fill','#888888'); ci.setAttribute('stroke','#ffffff');
+    ci.setAttribute('r','22'); ci.style.filter='drop-shadow(0 0 8px #ffffff)';
+    if(lid) lid.setAttribute('fill','#ffffff');
+  } else if(state==='NEGRO'){
+    ci.setAttribute('fill','#111111'); ci.setAttribute('stroke','#555555');
+    ci.setAttribute('r','18'); ci.style.filter='';
+    if(lid) lid.setAttribute('fill','#ffffff');
   }
 }
 
-// ─── LOG ───
-function log(msg, cls='log-info') {
-  const d = document.getElementById('log');
-  const e = document.createElement('div');
-  e.className = `log-entry ${cls}`;
-  e.textContent = msg;
-  d.appendChild(e);
-  d.scrollTop = d.scrollHeight;
+// ── Color de arista ──
+function setEdge(a,b,type,idx){
+  const el=document.getElementById(`e-${a}-${b}`)||document.getElementById(`e-${b}-${a}`);
+  const tl=document.getElementById(`el-${a}-${b}`)||document.getElementById(`el-${b}-${a}`);
+  if(!el) return;
+  const COMP=['#ff00cc','#ffdd00','#00ffaa','#ff6600'];
+  if(type==='active'){ el.style.stroke='#00eeff'; el.style.strokeWidth='5'; el.style.filter='drop-shadow(0 0 6px #00eeff)'; if(tl) tl.style.fill='#00eeff'; }
+  if(type==='cycle') { el.style.stroke='#ff0055'; el.style.strokeWidth='6'; el.style.filter='drop-shadow(0 0 8px #ff0055)'; if(tl) tl.style.fill='#ff0055'; }
+  if(type==='comp')  { const c=COMP[(idx||0)%COMP.length]; el.style.stroke=c; el.style.strokeWidth='4'; el.style.filter=`drop-shadow(0 0 5px ${c})`; if(tl) tl.style.fill=c; }
 }
 
-function setStatus(msg) {
-  document.getElementById('status').textContent = msg;
+// ── Helpers ──
+function addLog(msg,cls='li'){
+  const d=document.getElementById('log');
+  const e=document.createElement('div');
+  e.className=`log-entry ${cls}`;e.textContent=msg;
+  d.appendChild(e); d.scrollTop=d.scrollHeight;
+}
+function setSt(msg){ document.getElementById('status').textContent=msg; }
+function delay(){ return parseInt(document.getElementById('spd').value); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function setActive(id){ document.querySelectorAll('button').forEach(b=>b.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
+
+function showTip(n,e){
+  const t=document.getElementById('tip');
+  const adj=ADJ[n.id].map(v=>`${v.to}(${v.w}m)`).join(', ');
+  t.innerHTML=`<strong>${n.id} — ${n.name}</strong>Estado: ${colState[n.id]}<br>Vecinos: ${adj}`;
+  t.style.left=(e.offsetX+16)+'px'; t.style.top=(e.offsetY+16)+'px';
+  t.classList.add('show');
+}
+function hideTip(){ document.getElementById('tip').classList.remove('show'); }
+
+// ── Reset visual (sin reconstruir SVG) ──
+function doReset(clearLog=true){
+  busy=false;
+  const svg=document.getElementById('graph');
+  svg.querySelectorAll('.edge-line').forEach(el=>{ el.style.stroke=''; el.style.strokeWidth=''; el.style.filter=''; });
+  svg.querySelectorAll('.edge-label').forEach(el=>{ el.style.fill=''; });
+  // Eliminar walker si existe
+  document.getElementById('walker')?.remove();
+  // Resetear todos los nodos a BLANCO
+  NODES.forEach(n=>setColor(n.id,'BLANCO'));
+  if(clearLog){ document.getElementById('log').innerHTML=''; setSt('Selecciona un algoritmo para comenzar'); }
+  document.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
 }
 
-function getDelay() {
-  return parseInt(document.getElementById('speed').value);
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// ─── ADYACENCIA ───
-async function showAdjacency() {
-  if (running) return;
-  resetAll(false);
-  setActive('btn-adj');
-  log('── LISTA DE ADYACENCIA ──', 'log-section');
-  const adj = {};
-  EDGES.forEach(([a,b,w]) => {
-    if (!adj[a]) adj[a] = [];
-    if (!adj[b]) adj[b] = [];
-    adj[a].push({to:b, w});
-    adj[b].push({to:a, w});
-  });
-  for (const n of NODES) {
-    const vecinos = (adj[n.id]||[]).map(v=>`${v.to}(${v.w}m)`).join(', ');
-    log(`${n.id} → ${vecinos}`);
-    await sleep(getDelay()/3);
+// ── 1. Adyacencia ──
+async function showAdj(){
+  if(busy) return; doReset(false); setActive('b1');
+  addLog('── LISTA DE ADYACENCIA ──','ls');
+  for(const n of NODES){
+    const v=ADJ[n.id].map(x=>`${x.to}(${x.w}m)`).join(', ');
+    addLog(`${n.id} → ${v}`);
+    await sleep(delay()/4);
   }
-  log('✓ Adyacencia completa', 'log-result');
-  setStatus('Lista de adyacencia mostrada');
+  addLog('✓ Adyacencia completa','lr');
+  setSt('Lista de adyacencia mostrada');
 }
 
-// ─── DFS ───
-const adjMap = {};
-EDGES.forEach(([a,b,w]) => {
-  if (!adjMap[a]) adjMap[a] = [];
-  if (!adjMap[b]) adjMap[b] = [];
-  adjMap[a].push({to:b,w});
-  adjMap[b].push({to:a,w});
-});
-
-let dfsColor = {};
-let paso = 0;
-
-async function dfsVisit(u) {
+// ── 2. DFS ──
+let dC={}, paso=0;
+async function dfsV(u){
   paso++;
-  dfsColor[u] = 'GRIS';
-  setNodeColor(u, 'GRIS');
-  log(`Paso ${paso} | VISITANDO [${u}] ${NODES.find(n=>n.id===u).name}`, 'log-visit');
-  setStatus(`Visitando ${u} → GRIS`);
-  await sleep(getDelay() * 1.5);
-
-  for (const {to:v, w} of (adjMap[u]||[])) {
-    if (dfsColor[v] === 'BLANCO') {
-      highlightEdge(u, v, 'active');
-      await dfsVisit(v);
-    } else if (dfsColor[v] === 'GRIS') {
-      highlightEdge(u, v, 'cycle');
-      log(`⚠ Back edge: [${u}] → [${v}]`, 'log-cycle');
-    }
+  dC[u]='GRIS'; setColor(u,'GRIS');
+  addLog(`Paso ${paso} | GRIS  [${u}] ${NODES.find(n=>n.id===u).name}`,'lv');
+  setSt(`Visitando ${u} → GRIS`);
+  await sleep(delay());
+  for(const {to:v} of ADJ[u]){
+    if(dC[v]==='BLANCO'){ setEdge(u,v,'active'); await dfsV(v); }
+    else if(dC[v]==='GRIS'){ setEdge(u,v,'cycle'); addLog(`⚠ Back edge [${u}]→[${v}]`,'lc'); }
   }
-
-  dfsColor[u] = 'NEGRO';
-  setNodeColor(u, 'NEGRO');
-  log(`   TERMINADO [${u}] → NEGRO`, 'log-done');
-  setStatus(`Completado ${u} → NEGRO`);
-  await sleep(getDelay());
+  dC[u]='NEGRO'; setColor(u,'NEGRO');
+  addLog(`         NEGRO [${u}]`,'ld');
+  setSt(`Completado ${u} → NEGRO`);
+  await sleep(delay()*0.6);
+}
+async function runDFS(){
+  if(busy) return; busy=true; doReset(false); setActive('b2');
+  dC={}; paso=0; NODES.forEach(n=>dC[n.id]='BLANCO');
+  addLog('── DFS CON COLOREO ──','ls');
+  addLog('BLANCO=no visitado | GRIS=en proceso | NEGRO=terminado');
+  for(const n of NODES){ if(dC[n.id]==='BLANCO'){ addLog(`── Inicio desde [${n.id}] ──`); await dfsV(n.id); } }
+  addLog('✓ DFS completado','lr'); setSt('DFS completado'); busy=false;
 }
 
-async function runDFS() {
-  if (running) return;
-  running = true;
-  resetAll(false);
-  setActive('btn-dfs');
-  dfsColor = {};
-  paso = 0;
-  NODES.forEach(n => { dfsColor[n.id]='BLANCO'; });
-
-  log('── DFS CON COLOREO ──', 'log-section');
-  log('BLANCO→no visitado  GRIS→en proceso  NEGRO→terminado', 'log-info');
-
-  for (const n of NODES) {
-    if (dfsColor[n.id] === 'BLANCO') {
-      log(`── Inicio DFS desde [${n.id}] ──`, 'log-info');
-      await dfsVisit(n.id);
-    }
+// ── 3. Ciclos ──
+let cC={}, ciclos=[];
+async function dfsC(u,padre){
+  cC[u]='GRIS'; setColor(u,'GRIS'); await sleep(delay());
+  for(const {to:v} of ADJ[u]){
+    if(v===padre) continue;
+    if(cC[v]==='GRIS'){ setEdge(u,v,'cycle'); ciclos.push(`[${u}]↔[${v}]`); addLog(`⚠ CICLO: [${u}] ↔ [${v}]`,'lc'); return; }
+    if(cC[v]==='BLANCO'){ setEdge(u,v,'active'); await dfsC(v,u); }
   }
-  log('✓ DFS completado', 'log-result');
-  setStatus('DFS completado — todos los nodos procesados');
-  running = false;
+  cC[u]='NEGRO'; setColor(u,'NEGRO');
+}
+async function runCycle(){
+  if(busy) return; busy=true; doReset(false); setActive('b3');
+  cC={}; ciclos=[]; NODES.forEach(n=>cC[n.id]='BLANCO');
+  addLog('── DETECCIÓN DE CICLOS ──','ls');
+  for(const n of NODES){ if(cC[n.id]==='BLANCO') await dfsC(n.id,null); }
+  if(ciclos.length){ addLog(`RESULTADO: SI tiene ciclos (${ciclos.length})`, 'lr'); setSt(`✓ ${ciclos.length} ciclo(s) detectado(s)`); }
+  else { addLog('RESULTADO: NO tiene ciclos','lr'); setSt('Sin ciclos'); }
+  busy=false;
 }
 
-// ─── CICLOS ───
-let cycleColor = {};
-let cyclesFound = [];
-
-async function dfsForCycle(u, padre) {
-  cycleColor[u] = 'GRIS';
-  setNodeColor(u, 'GRIS');
-  await sleep(getDelay() * 1.5);
-
-  for (const {to:v} of (adjMap[u]||[])) {
-    if (v === padre) continue;
-    if (cycleColor[v] === 'GRIS') {
-      highlightEdge(u, v, 'cycle');
-      const msg = `⚠ CICLO: [${u}] ↔ [${v}]`;
-      cyclesFound.push(msg);
-      log(msg, 'log-cycle');
-      return;
-    }
-    if (cycleColor[v] === 'BLANCO') {
-      highlightEdge(u, v, 'active');
-      await dfsForCycle(v, u);
-    }
+// ── 4. Componentes ──
+const CCOMP=['#ff00cc','#ffdd00','#00ffaa','#ff6600'];
+let compV={};
+async function dfsComp(u,idx){
+  compV[u]=idx; setColor(u,'GRIS'); await sleep(delay()*0.7);
+  for(const {to:v} of ADJ[u]){
+    if(compV[v]===undefined){ setEdge(u,v,'comp',idx); await dfsComp(v,idx); }
   }
-
-  cycleColor[u] = 'NEGRO';
-  setNodeColor(u, 'NEGRO');
+  setColor(u,'NEGRO'); await sleep(delay()*0.5);
+  // Color final de componente
+  const ci=document.getElementById(`nc-${u}`);
+  const lid=document.getElementById(`nid-${u}`);
+  if(ci){ ci.setAttribute('fill',CCOMP[idx%CCOMP.length]); ci.setAttribute('stroke','#ffffff'); ci.setAttribute('r','20'); ci.style.filter=`drop-shadow(0 0 8px ${CCOMP[idx%CCOMP.length]})`; }
+  if(lid) lid.setAttribute('fill','#000');
+}
+async function runComp(){
+  if(busy) return; busy=true; doReset(false); setActive('b4');
+  compV={}; let cnt=0;
+  addLog('── COMPONENTES CONEXAS ──','ls');
+  for(const n of NODES){ if(compV[n.id]===undefined){ addLog(`Componente ${cnt+1}: inicio en [${n.id}]`); await dfsComp(n.id,cnt); cnt++; } }
+  addLog(`Total: ${cnt} componente(s)`, 'lr');
+  if(cnt===1){ addLog('✓ El grafo es CONEXO','lr'); setSt('✓ Grafo CONEXO — 1 componente'); }
+  else { setSt(`${cnt} componentes conexas`); }
+  busy=false;
 }
 
-async function runCycle() {
-  if (running) return;
-  running = true;
-  resetAll(false);
-  setActive('btn-cycle');
-  cycleColor = {};
-  cyclesFound = [];
-  NODES.forEach(n => { cycleColor[n.id]='BLANCO'; });
-
-  log('── DETECCIÓN DE CICLOS ──', 'log-section');
-  log('Si un vecino GRIS es encontrado → existe ciclo', 'log-info');
-
-  for (const n of NODES) {
-    if (cycleColor[n.id] === 'BLANCO') {
-      await dfsForCycle(n.id, null);
+// ── 5. Recorrido animado ──
+async function runWalk(){
+  if(busy) return; busy=true; doReset(false); setActive('b5');
+  addLog('── RECORRIDO DEL GRAFO ──','ls');
+  // Construir ruta DFS
+  const vis=new Set(), route=[];
+  function buildR(u){ vis.add(u); route.push(u); for(const {to:v} of ADJ[u]){ if(!vis.has(v)){ buildR(v); route.push(u); } } }
+  buildR(NODES[0].id);
+  // Crear punto
+  const svg=document.getElementById('graph');
+  const wk=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  wk.setAttribute('id','walker'); wk.setAttribute('r','10');
+  wk.setAttribute('fill','#ffdd00'); wk.setAttribute('stroke','#ffffff'); wk.setAttribute('stroke-width','2');
+  wk.style.filter='drop-shadow(0 0 10px #ffdd00)'; wk.style.pointerEvents='none';
+  svg.appendChild(wk);
+  const s0=nodePos[route[0]]; wk.setAttribute('cx',s0.x); wk.setAttribute('cy',s0.y);
+  setColor(route[0],'GRIS');
+  const spd=delay();
+  for(let i=1;i<route.length;i++){
+    if(!busy) break;
+    const fr=nodePos[route[i-1]], to=nodePos[route[i]], steps=40;
+    setColor(route[i-1],'NEGRO');
+    setEdge(route[i-1],route[i],'active');
+    for(let s=0;s<=steps;s++){
+      if(!busy) break;
+      const t=s/steps;
+      wk.setAttribute('cx', fr.x+(to.x-fr.x)*t);
+      wk.setAttribute('cy', fr.y+(to.y-fr.y)*t);
+      await sleep(spd/steps);
     }
+    setColor(route[i],'GRIS');
+    addLog(`→ [${route[i]}] ${NODES.find(n=>n.id===route[i]).name}`,'lv');
+    setSt(`Visitando ${route[i]}`);
+    await sleep(spd/4);
   }
-
-  if (cyclesFound.length > 0) {
-    log(`RESULTADO: El grafo SÍ tiene ciclos (${cyclesFound.length} detectados)`, 'log-result');
-    setStatus(`✓ Ciclos detectados: ${cyclesFound.length}`);
-  } else {
-    log('RESULTADO: El grafo NO tiene ciclos', 'log-result');
-    setStatus('El grafo no tiene ciclos');
-  }
-  running = false;
+  setColor(route[route.length-1],'NEGRO');
+  wk.setAttribute('fill','#00ff88'); wk.style.filter='drop-shadow(0 0 14px #00ff88)';
+  addLog('✓ Recorrido completado','lr'); setSt('✓ Recorrido completo');
+  busy=false;
 }
 
-// ─── COMPONENTES CONEXAS ───
-const compColors = ['#7b2fff','#ff6b35','#00d4ff','#00ff88'];
-let compColor = {};
-
-async function dfsComp(u, compId) {
-  compColor[u] = compId;
-  const compColors2 = ['#ff00cc','#ffdd00','#00ffaa','#ff6600'];
-  const finalColor = compColors2[compId % compColors2.length];
-
-  // GRIS: en proceso
-  setNodeColor(u, 'GRIS');
-  await sleep(getDelay());
-
-  for (const {to:v} of (adjMap[u]||[])) {
-    if (compColor[v] === undefined) {
-      highlightEdge(u, v, 'comp', compId);
-      await dfsComp(v, compId);
-    }
-  }
-
-  // NEGRO: terminado -> luego color de componente
-  setNodeColor(u, 'NEGRO');
-  await sleep(getDelay() * 0.8);
-
-  // Pintar con color de componente
-  const c = document.getElementById(`node-${u}`);
-  if (c) {
-    c.setAttribute('fill', finalColor);
-    c.setAttribute('stroke','#ffffff');
-    c.setAttribute('r','20');
-    c.style.filter=`drop-shadow(0 0 8px ${finalColor})`;
-  }
-  const lid = document.querySelector(`#node-g-${u} .node-label-id`);
-  if (lid) lid.setAttribute('fill','#000000');
-}
-
-async function runComponents() {
-  if (running) return;
-  running = true;
-  resetAll(false);
-  setActive('btn-comp');
-  compColor = {};
-  let count = 0;
-
-  log('── COMPONENTES CONEXAS ──', 'log-section');
-
-  for (const n of NODES) {
-    if (compColor[n.id] === undefined) {
-      log(`Componente ${count+1}: inicio en [${n.id}]`, 'log-info');
-      await dfsComp(n.id, count);
-      count++;
-    }
-  }
-
-  log(`Total de componentes: ${count}`, 'log-result');
-  if (count === 1) {
-    log('✓ El grafo es CONEXO', 'log-result');
-    setStatus('✓ El grafo es completamente CONEXO — 1 componente');
-  } else {
-    log(`⚠ El grafo tiene ${count} componentes`, 'log-result');
-    setStatus(`El grafo tiene ${count} componentes conexas`);
-  }
-  running = false;
-}
-
-// ─── RESET ───
-function resetAll(resetLog=true) {
-  running = false;
-
-  // Resetear colores de aristas sin reconstruir el SVG
-  const svg = document.getElementById('graph');
-  svg.querySelectorAll('.edge-line').forEach(el => {
-    el.style.stroke = '';
-    el.style.strokeWidth = '';
-    el.style.filter = '';
-  });
-  svg.querySelectorAll('.edge-label').forEach(el => {
-    el.style.fill = '';
-  });
-
-  // Resetear walker si existe
-  const walker = svg.querySelector('circle[fill="#ffdd00"], circle[fill="#00ff88"]');
-  if (walker && !walker.classList.contains('node-circle')) walker.remove();
-
-  // Resetear colores de nodos
-  NODES.forEach(n => setNodeColor(n.id, 'BLANCO'));
-
-  if (resetLog) {
-    document.getElementById('log').innerHTML = '';
-    setStatus('Selecciona un algoritmo para comenzar');
-  }
-  document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-}
-
-function setActive(id) {
-  document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-}
-
-// ─── RECORRIDO ANIMADO (punto caminando) ───
-async function runWalk() {
-  if (running) return;
-  running = true;
-  resetAll(false);
-  setActive('btn-walk');
-  log('── RECORRIDO DEL GRAFO ──', 'log-section');
-  log('Un punto recorre todos los nodos via DFS', 'log-info');
-
-  // Crear el punto viajero
-  const svg = document.getElementById('graph');
-  const walker = document.createElementNS('http://www.w3.org/2000/svg','circle');
-  walker.setAttribute('r','10');
-  walker.setAttribute('fill','#ffdd00');
-  walker.setAttribute('stroke','#ffffff');
-  walker.setAttribute('stroke-width','2');
-  walker.style.filter = 'drop-shadow(0 0 10px #ffdd00)';
-  walker.style.pointerEvents = 'none';
-  svg.appendChild(walker);
-
-  // Trazar ruta DFS
-  const visited = new Set();
-  const route = []; // lista de nodos en orden DFS
-
-  function buildRoute(u) {
-    visited.add(u);
-    route.push(u);
-    for (const {to:v} of (adjMap[u]||[])) {
-      if (!visited.has(v)) {
-        buildRoute(v);
-        route.push(u); // volver al nodo padre
-      }
-    }
-  }
-  buildRoute(NODES[0].id);
-
-  // Posición inicial
-  const start = nodePos[route[0]];
-  walker.setAttribute('cx', start.x);
-  walker.setAttribute('cy', start.y);
-  setNodeColor(route[0], 'GRIS');
-
-  const delay = getDelay();
-
-  // Animar entre nodos
-  for (let i = 1; i < route.length; i++) {
-    if (!running) break;
-    const from = nodePos[route[i-1]];
-    const to   = nodePos[route[i]];
-    const steps = 40;
-
-    // Marcar nodo de origen como visitado
-    setNodeColor(route[i-1], 'NEGRO');
-
-    // Resaltar arista
-    highlightEdge(route[i-1], route[i], 'active');
-
-    // Animar movimiento suave
-    for (let s = 0; s <= steps; s++) {
-      if (!running) break;
-      const t = s / steps;
-      const cx = from.x + (to.x - from.x) * t;
-      const cy = from.y + (to.y - from.y) * t;
-      walker.setAttribute('cx', cx);
-      walker.setAttribute('cy', cy);
-      await sleep(delay / steps);
-    }
-
-    // Marcar nodo destino
-    setNodeColor(route[i], 'GRIS');
-    log(`→ [${route[i]}] ${NODES.find(n=>n.id===route[i]).name}`, 'log-visit');
-    setStatus(`Visitando ${route[i]}`);
-    await sleep(delay / 3);
-  }
-
-  // Terminar último nodo
-  setNodeColor(route[route.length-1], 'NEGRO');
-  walker.style.filter = 'drop-shadow(0 0 16px #00ff88)';
-  walker.setAttribute('fill','#00ff88');
-
-  log('✓ Recorrido completado', 'log-result');
-  setStatus('✓ Recorrido completo — todos los nodos visitados');
-  running = false;
-}
-
-// ─── INIT ───
-window.addEventListener('load', () => {
+// ── Init ──
+window.addEventListener('load',()=>{
   buildGraph();
-  NODES.forEach(n => setNodeColor(n.id, 'BLANCO'));
-  window.addEventListener('resize', () => {
-    buildGraph();
-    NODES.forEach(n => setNodeColor(n.id, color[n.id] || 'BLANCO'));
-  });
 });
+
 </script>
 </body>
 </html>
